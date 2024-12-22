@@ -1,0 +1,60 @@
+local tool = Instance.new("Tool")
+tool.RequiresHandle = false
+tool.Name = "Float"
+
+local isFloating = false
+
+local function unfloatCharacter(character)
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if humanoidRootPart then
+        local bodyVelocity = humanoidRootPart:FindFirstChild("BodyVelocity")
+        if bodyVelocity then
+            bodyVelocity:Destroy()
+        end
+    end
+end
+
+local function flingCharacter(character)
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if humanoidRootPart then
+        local bodyVelocity = humanoidRootPart:FindFirstChild("BodyVelocity")
+        if not bodyVelocity then
+            bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.Velocity = Vector3.new(0, 7, 0)
+            bodyVelocity.MaxForce = Vector3.new(0, math.huge, 0)
+            bodyVelocity.Parent = humanoidRootPart
+        else
+            bodyVelocity.Velocity = Vector3.new(0, 7, 0)
+        end
+    end
+end
+
+tool.Activated:Connect(function()
+    local character = game.Players.LocalPlayer.Character
+    if not character then return end
+
+    if not isFloating then
+        isFloating = true
+        tool.Name = "Unfloat"
+        while isFloating do
+            flingCharacter(character)
+            wait(0.1)
+        end
+    else
+        isFloating = false
+        tool.Name = "Float"
+        unfloatCharacter(character)
+    end
+end)
+
+tool.Unequipped:Connect(function()
+    if isFloating then
+        isFloating = false
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            unfloatCharacter(character)
+        end
+    end
+end)
+
+tool.Parent = game.Players.LocalPlayer.Backpack
