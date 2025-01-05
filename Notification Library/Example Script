@@ -1,12 +1,14 @@
 local NotificationLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/jimmyscriptsroblox/Universal/refs/heads/main/Notification%20Library/Source"))()
 
--- Test notification
+--[[ Test notification
 NotificationLibrary:Notify("Welcome!", "This is a test notification!", 5)
+]]--
 
--- Test notification with buttons
+--[[ Test notification with buttons
 NotificationLibrary:NotifyWithButtons("Test", "This is a test with buttons", 
     { 
         {text = "OK", callback = function() print("OK clicked") end},
         {text = "Cancel", callback = function() print("Cancel clicked") end}
     }, 
     5)
+]]--
