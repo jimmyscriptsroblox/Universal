@@ -5,188 +5,136 @@ local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
 
 _G.ActiveNotifications = _G.ActiveNotifications or {}
-local activeNotifications = _G.ActiveNotifications
-local maxNotifications = 5
-local notificationSpacing = 0.12
-
-local function animateExit(frame, screenGui, verticalPosition, duration)
-    task.delay(duration, function()
-        local exitTween = TweenService:Create(
-            frame,
-            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-            { Position = UDim2.new(1.5, 0, verticalPosition, 0) }
-        )
-        exitTween:Play()
-        exitTween.Completed:Wait()
-        screenGui:Destroy()
-        for i, notification in ipairs(activeNotifications) do
-            if notification.Frame == frame then
-                table.remove(activeNotifications, i)
-                break
-            end
-        end
-        for i, notification in ipairs(activeNotifications) do
-            local newVerticalPosition = 0.85 - ((i - 1) * notificationSpacing)
-            TweenService:Create(
-                notification.Frame,
-                TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                { Position = UDim2.new(0.25, 0, newVerticalPosition, 0) }
-            ):Play()
-        end
-    end)
-end
+local notifications = _G.ActiveNotifications
+local maxNotifications, spacing = 5, 0.12
 
 local function createScreenGui(name)
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = name
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-    return screenGui
+	local gui = Instance.new("ScreenGui")
+	gui.Name = name
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+	return gui
 end
 
 local function playSound()
-    local sound = Instance.new("Sound")
-    sound.SoundId = "rbxassetid://4590662766"
-    sound.Volume = 1
-    sound.Parent = SoundService
-    sound:Play()
+	local sound = Instance.new("Sound")
+	sound.SoundId = "rbxassetid://4590662766"
+	sound.Volume = 1
+	sound.Parent = SoundService
+	sound:Play()
 end
 
-local function createFrame(screenGui, verticalPosition, heightScale)
-    local frame = Instance.new("Frame")
-    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    frame.Size = UDim2.new(0.5, 0, heightScale, 0)
-    frame.Position = UDim2.new(-1, 0, verticalPosition, 0)
-    frame.AnchorPoint = Vector2.new(0, 0.5)
-    frame.ZIndex = 100
-    frame.Parent = screenGui
+local function createFrame(gui, yPos, scale)
+	local frame = Instance.new("Frame")
+	frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	frame.Size = UDim2.new(0.5, 0, scale, 0)
+	frame.Position = UDim2.new(-1, 0, yPos, 0)
+	frame.AnchorPoint = Vector2.new(0, 0.5)
+	frame.ZIndex = 100
+	frame.Parent = gui
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = frame
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 10)
+	corner.Parent = frame
 
-    return frame
+	return frame
 end
 
-local function createNormalNotificationUI(title, message, duration)
-    local screenGui = createScreenGui("NotificationScreen")
-    local index = #activeNotifications + 1
-    local verticalPosition = 0.85 - ((index - 1) * notificationSpacing)
-    local frame = createFrame(screenGui, verticalPosition, 0.1)
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Text = title
-    titleLabel.Size = UDim2.new(1, 0, 0.4, 0)
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.TextSize = 22
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.ZIndex = 101
-    titleLabel.Parent = frame
-
-    local messageLabel = Instance.new("TextLabel")
-    messageLabel.Text = message
-    messageLabel.Size = UDim2.new(1, 0, 0.6, 0)
-    messageLabel.Position = UDim2.new(0, 0, 0.4, 0)
-    messageLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    messageLabel.BackgroundTransparency = 1
-    messageLabel.TextSize = 18
-    messageLabel.TextWrapped = true
-    messageLabel.Font = Enum.Font.Gotham
-    messageLabel.ZIndex = 101
-    messageLabel.Parent = frame
-
-    playSound()
-
-    local enterTween = TweenService:Create(
-        frame,
-        TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        { Position = UDim2.new(0.25, 0, verticalPosition, 0) }
-    )
-    enterTween:Play()
-
-    table.insert(activeNotifications, { Frame = frame, ScreenGui = screenGui, VerticalPos = verticalPosition })
-
-    animateExit(frame, screenGui, verticalPosition, duration)
+local function createLabel(parent, text, size, position, font, textSize, color)
+	local label = Instance.new("TextLabel")
+	label.Text = text
+	label.Size = size
+	label.Position = position
+	label.Font = font
+	label.TextSize = textSize
+	label.TextColor3 = color
+	label.BackgroundTransparency = 1
+	label.ZIndex = 101
+	label.Parent = parent
+	return label
 end
 
-local function createButtonNotificationUI(title, message, buttons, duration)
-    local screenGui = createScreenGui("ButtonNotificationScreen")
-    local index = #activeNotifications + 1
-    local verticalPosition = 0.85 - ((index - 1) * notificationSpacing)
-    local frame = createFrame(screenGui, verticalPosition, 0.15)
+local function tweenFrame(frame, targetPos, duration)
+	local tween = TweenService:Create(frame, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Position = targetPos })
+	tween:Play()
+	return tween
+end
 
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Text = title
-    titleLabel.Size = UDim2.new(1, 0, 0.4, 0)
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.TextSize = 22
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.ZIndex = 101
-    titleLabel.Parent = frame
+local function cleanup(frame, gui, yPos, delay)
+	task.delay(delay, function()
+		local exitTween = TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Position = UDim2.new(1.5, 0, yPos, 0) })
+		exitTween:Play()
+		exitTween.Completed:Wait()
+		gui:Destroy()
 
-    local messageLabel = Instance.new("TextLabel")
-    messageLabel.Text = message
-    messageLabel.Size = UDim2.new(1, 0, 0.4, 0)
-    messageLabel.Position = UDim2.new(0, 0, 0.4, 0)
-    messageLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    messageLabel.BackgroundTransparency = 1
-    messageLabel.TextSize = 18
-    messageLabel.TextWrapped = true
-    messageLabel.Font = Enum.Font.Gotham
-    messageLabel.ZIndex = 101
-    messageLabel.Parent = frame
+		for i, notif in ipairs(notifications) do
+			if notif.Frame == frame then
+				table.remove(notifications, i)
+				break
+			end
+		end
 
-    local buttonSpacing = 0.15
-    local buttonWidth = 0.25
-    for i, button in ipairs(buttons) do
-        local btn = Instance.new("TextButton")
-        btn.Text = button.text
-        btn.Size = UDim2.new(buttonWidth, 0, 0.3, 0)
-        btn.Position = UDim2.new(0.1 + (i - 1) * (buttonWidth + buttonSpacing), 0, 0.7, 0)
-        btn.BackgroundColor3 = Color3.fromRGB(0, 122, 255)
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Font = Enum.Font.Gotham
-        btn.TextSize = 18
-        btn.ZIndex = 102
-        btn.Parent = frame
-        btn.MouseButton1Click:Connect(function()
-            if button.callback then
-                button.callback()
-            end
-            screenGui:Destroy()
-        end)
-    end
+		for i, notif in ipairs(notifications) do
+			local newY = 0.85 - ((i - 1) * spacing)
+			tweenFrame(notif.Frame, UDim2.new(0.25, 0, newY, 0), 0.5)
+		end
+	end)
+end
 
-    playSound()
+local function createNotification(title, message, duration, withButtons, buttons)
+	local index = #notifications + 1
+	local yPos = 0.85 - ((index - 1) * spacing)
+	local guiName = withButtons and "ButtonNotificationScreen" or "NotificationScreen"
+	local gui = createScreenGui(guiName)
+	local scale = withButtons and 0.15 or 0.1
+	local frame = createFrame(gui, yPos, scale)
 
-    local enterTween = TweenService:Create(
-        frame,
-        TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        { Position = UDim2.new(0.25, 0, verticalPosition, 0) }
-    )
-    enterTween:Play()
+	createLabel(frame, title, UDim2.new(1, 0, 0.4, 0), UDim2.new(0, 0, 0, 0), Enum.Font.GothamBold, 22, Color3.new(1, 1, 1))
+	createLabel(frame, message, UDim2.new(1, 0, withButtons and 0.4 or 0.6, 0), UDim2.new(0, 0, 0.4, 0), Enum.Font.Gotham, 18, Color3.fromRGB(200, 200, 200))
 
-    table.insert(activeNotifications, { Frame = frame, ScreenGui = screenGui, VerticalPos = verticalPosition })
+	if withButtons and buttons then
+		local btnSpacing, btnWidth = 0.15, 0.25
+		for i, btnInfo in ipairs(buttons) do
+			local btn = Instance.new("TextButton")
+			btn.Text = btnInfo.text
+			btn.Size = UDim2.new(btnWidth, 0, 0.3, 0)
+			btn.Position = UDim2.new(0.1 + (i - 1) * (btnWidth + btnSpacing), 0, 0.7, 0)
+			btn.BackgroundColor3 = Color3.fromRGB(0, 122, 255)
+			btn.TextColor3 = Color3.new(1, 1, 1)
+			btn.Font = Enum.Font.Gotham
+			btn.TextSize = 18
+			btn.ZIndex = 102
+			btn.Parent = frame
 
-    animateExit(frame, screenGui, verticalPosition, duration)
+			btn.MouseButton1Click:Connect(function()
+				if btnInfo.callback then
+					btnInfo.callback()
+				end
+				gui:Destroy()
+			end)
+		end
+	end
+
+	playSound()
+	tweenFrame(frame, UDim2.new(0.25, 0, yPos, 0), 0.5)
+	table.insert(notifications, { Frame = frame, ScreenGui = gui })
+	cleanup(frame, gui, yPos, duration)
 end
 
 function NotificationLibrary:Notify(title, message, duration)
-    duration = duration or 5
-    if #activeNotifications >= maxNotifications then
-        return
-    end
-    createNormalNotificationUI(title, message, duration)
+	duration = duration or 5
+	if #notifications >= maxNotifications then
+		return
+	end
+	createNotification(title, message, duration, false)
 end
 
 function NotificationLibrary:NotifyWithButtons(title, message, buttons, duration)
-    duration = duration or 5
-    if #activeNotifications >= maxNotifications then
-        return
-    end
-    createButtonNotificationUI(title, message, buttons, duration)
+	duration = duration or 5
+	if #notifications >= maxNotifications then
+		return
+	end
+	createNotification(title, message, duration, true, buttons)
 end
 
 return NotificationLibrary
