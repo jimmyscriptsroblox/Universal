@@ -9,18 +9,53 @@ local activeNotifications = _G.ActiveNotifications
 local maxNotifications = 5
 local notificationSpacing = 0.12
 
-local function createNormalNotificationUI(title, message, duration)
+local function animateExit(frame, screenGui, verticalPosition, duration)
+    task.delay(duration, function()
+        local exitTween = TweenService:Create(
+            frame,
+            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+            { Position = UDim2.new(1.5, 0, verticalPosition, 0) }
+        )
+        exitTween:Play()
+        exitTween.Completed:Wait()
+        screenGui:Destroy()
+        for i, notification in ipairs(activeNotifications) do
+            if notification.Frame == frame then
+                table.remove(activeNotifications, i)
+                break
+            end
+        end
+        for i, notification in ipairs(activeNotifications) do
+            local newVerticalPosition = 0.85 - ((i - 1) * notificationSpacing)
+            TweenService:Create(
+                notification.Frame,
+                TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                { Position = UDim2.new(0.25, 0, newVerticalPosition, 0) }
+            ):Play()
+        end
+    end)
+end
+
+local function createScreenGui(name)
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "NotificationScreen"
+    screenGui.Name = name
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    return screenGui
+end
 
-    local index = #activeNotifications + 1
-    local verticalPosition = 0.85 - ((index - 1) * notificationSpacing)
+local function playSound()
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://4590662766"
+    sound.Volume = 1
+    sound.Parent = SoundService
+    sound:Play()
+end
 
+local function createFrame(screenGui, verticalPosition, heightScale)
     local frame = Instance.new("Frame")
     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    frame.Size = UDim2.new(0.5, 0, 0.1, 0)
+    frame.Size = UDim2.new(0.5, 0, heightScale, 0)
     frame.Position = UDim2.new(-1, 0, verticalPosition, 0)
     frame.AnchorPoint = Vector2.new(0, 0.5)
     frame.ZIndex = 100
@@ -29,6 +64,15 @@ local function createNormalNotificationUI(title, message, duration)
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 10)
     corner.Parent = frame
+
+    return frame
+end
+
+local function createNormalNotificationUI(title, message, duration)
+    local screenGui = createScreenGui("NotificationScreen")
+    local index = #activeNotifications + 1
+    local verticalPosition = 0.85 - ((index - 1) * notificationSpacing)
+    local frame = createFrame(screenGui, verticalPosition, 0.1)
 
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Text = title
@@ -52,11 +96,7 @@ local function createNormalNotificationUI(title, message, duration)
     messageLabel.ZIndex = 101
     messageLabel.Parent = frame
 
-    local sound = Instance.new("Sound")
-    sound.SoundId = "rbxassetid://4590662766"
-    sound.Volume = 1
-    sound.Parent = SoundService
-    sound:Play()
+    playSound()
 
     local enterTween = TweenService:Create(
         frame,
@@ -67,55 +107,14 @@ local function createNormalNotificationUI(title, message, duration)
 
     table.insert(activeNotifications, { Frame = frame, ScreenGui = screenGui, VerticalPos = verticalPosition })
 
-    task.delay(duration, function()
-        local exitTween = TweenService:Create(
-            frame,
-            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-            { Position = UDim2.new(1.5, 0, verticalPosition, 0) }
-        )
-        exitTween:Play()
-
-        exitTween.Completed:Wait()
-        screenGui:Destroy()
-
-        for i, notification in ipairs(activeNotifications) do
-            if notification.Frame == frame then
-                table.remove(activeNotifications, i)
-                break
-            end
-        end
-
-        for i, notification in ipairs(activeNotifications) do
-            local newVerticalPosition = 0.85 - ((i - 1) * notificationSpacing)
-            TweenService:Create(
-                notification.Frame,
-                TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                { Position = UDim2.new(0.25, 0, newVerticalPosition, 0) }
-            ):Play()
-        end
-    end)
+    animateExit(frame, screenGui, verticalPosition, duration)
 end
 
 local function createButtonNotificationUI(title, message, buttons, duration)
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "ButtonNotificationScreen"
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
+    local screenGui = createScreenGui("ButtonNotificationScreen")
     local index = #activeNotifications + 1
     local verticalPosition = 0.85 - ((index - 1) * notificationSpacing)
-
-    local frame = Instance.new("Frame")
-    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    frame.Size = UDim2.new(0.5, 0, 0.15, 0)
-    frame.Position = UDim2.new(-1, 0, verticalPosition, 0)
-    frame.AnchorPoint = Vector2.new(0, 0.5)
-    frame.ZIndex = 100
-    frame.Parent = screenGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = frame
+    local frame = createFrame(screenGui, verticalPosition, 0.15)
 
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Text = title
@@ -152,7 +151,6 @@ local function createButtonNotificationUI(title, message, buttons, duration)
         btn.TextSize = 18
         btn.ZIndex = 102
         btn.Parent = frame
-
         btn.MouseButton1Click:Connect(function()
             if button.callback then
                 button.callback()
@@ -161,11 +159,7 @@ local function createButtonNotificationUI(title, message, buttons, duration)
         end)
     end
 
-    local sound = Instance.new("Sound")
-    sound.SoundId = "rbxassetid://4590662766"
-    sound.Volume = 1
-    sound.Parent = SoundService
-    sound:Play()
+    playSound()
 
     local enterTween = TweenService:Create(
         frame,
@@ -176,33 +170,7 @@ local function createButtonNotificationUI(title, message, buttons, duration)
 
     table.insert(activeNotifications, { Frame = frame, ScreenGui = screenGui, VerticalPos = verticalPosition })
 
-    task.delay(duration, function()
-        local exitTween = TweenService:Create(
-            frame,
-            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-            { Position = UDim2.new(1.5, 0, verticalPosition, 0) }
-        )
-        exitTween:Play()
-
-        exitTween.Completed:Wait()
-        screenGui:Destroy()
-
-        for i, notification in ipairs(activeNotifications) do
-            if notification.Frame == frame then
-                table.remove(activeNotifications, i)
-                break
-            end
-        end
-
-        for i, notification in ipairs(activeNotifications) do
-            local newVerticalPosition = 0.85 - ((i - 1) * notificationSpacing)
-            TweenService:Create(
-                notification.Frame,
-                TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                { Position = UDim2.new(0.25, 0, newVerticalPosition, 0) }
-            ):Play()
-        end
-    end)
+    animateExit(frame, screenGui, verticalPosition, duration)
 end
 
 function NotificationLibrary:Notify(title, message, duration)
